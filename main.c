@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#define SIZE 1000
-#define ACCURACY 50
+#define SIZE 2500
+#define ACCURACY 5
 #define PI 3.14159265
 typedef struct
 {
@@ -180,6 +180,8 @@ CFloat get_cfloat()
         else
             result.mantissa[i - minus - dot] = number[i] - '0';
     }
+    if(dot == 0)
+        result.exponent = len - minus + 1;
     return result;
 }
 CFloat plus(CFloat val1, CFloat val2)
@@ -413,19 +415,15 @@ CFloat divide(CFloat val1, CFloat val2)
     int resind = 0;
     int zind = 0;
     int prepare = 1;
-    if(higher(divisor, dividend))
-        prepare = 0;
+    int specoffs = 1;
+    if(dividend.mantissa[0] >= divisor.mantissa[0])
+        specoffs = 0;
     for(int i = 0;i < SIZE;i++)
     {
         remainder = multiply(remainder, convert_toCF(10.0));
         remainder = plus(remainder, subCFloat(val1, i, i));
         if(i == dividend.exponent)
-        {
-            if(higher(divisor, dividend))
-                result.exponent = 1;
-            else
-                result.exponent = resind;
-        }
+            result.exponent = resind;
         if(higher(remainder, divisor))
         {
             zind = 0;
@@ -448,6 +446,11 @@ CFloat divide(CFloat val1, CFloat val2)
             }
         }
     }
+    if(higher(divisor, dividend))
+    {
+        result = offset(result, divisor.exponent-dividend.exponent+specoffs, 1);
+        result.exponent = 1;
+    }
     if(val1.sign == val2.sign)
         result.sign = 0;
     else
@@ -457,10 +460,10 @@ CFloat divide(CFloat val1, CFloat val2)
 CFloat TaylorMemb(CFloat val, int n)
 {
     CFloat res = val;
-    CFloat one = convert_toCF(-1.0);
-    res = multiply(res, raise(one, n+1));
+    CFloat one = raise(convert_toCF(-1.0), n+1);
     res = raise(res, 2*n-1);
     res = divide(res, factorial(2*n-1));
+    res.sign = one.sign;
     return res;
 }
 CFloat TaylorN(CFloat x, int n)
@@ -470,23 +473,32 @@ CFloat TaylorN(CFloat x, int n)
         res = plus(res, TaylorMemb(x, i));
     return res;
 }
-
 CFloat TaylorMax(CFloat x)
 {
-    CFloat dPi = convert_toCF(2*PI);
+    CFloat pi = convert_toCF(PI);
+    CFloat Dpi = convert_toCF(2*PI);
     CFloat minVal = createEpsilon();
-    while(higher(x, dPi))
-        x = minus(x, dPi);
-    CFloat res = x;
+    CFloat res;
+    int priv = 0;
+    while(higher(x, Dpi))
+        x = minus(x, Dpi);
+    if(higher(x, pi))
+    {
+        x = minus(x, pi);
+        priv = 1;
+    }
+    res = x;
     CFloat memb = TaylorMemb(x, 1);
-    int n = 1;
+    int n = 2;
     while(higher(memb, minVal))
     {
-        n++;
         memb = TaylorMemb(x, n);
         res = plus(res, memb);
+        n++;
     }
     printf("Total count of members: %d\n", n);
+    if(priv)
+        res.sign = 1;
     return res;
 }
 int main()
