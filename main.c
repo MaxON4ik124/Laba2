@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#define SIZE 2500
-#define ACCURACY 5
-#define PI 3.14159265
+#define SIZE 500
+#define ACCURACY 10
+#define PI 3.14159265358979323846
 typedef struct
 {
     short mantissa[SIZE];
@@ -418,6 +418,8 @@ CFloat divide(CFloat val1, CFloat val2)
     int specoffs = 1;
     if(dividend.mantissa[0] >= divisor.mantissa[0])
         specoffs = 0;
+    if(dividend.mantissa[0] == 0 && specoffs == 1)
+        specoffs = 2;
     for(int i = 0;i < SIZE;i++)
     {
         remainder = multiply(remainder, convert_toCF(10.0));
@@ -460,10 +462,9 @@ CFloat divide(CFloat val1, CFloat val2)
 CFloat TaylorMemb(CFloat val, int n)
 {
     CFloat res = val;
-    CFloat one = raise(convert_toCF(-1.0), n+1);
     res = raise(res, 2*n-1);
     res = divide(res, factorial(2*n-1));
-    res.sign = one.sign;
+    res.sign = n % 2 == 0 ? 1 : 0;
     return res;
 }
 CFloat TaylorN(CFloat x, int n)
@@ -488,8 +489,8 @@ CFloat TaylorMax(CFloat x)
         priv = 1;
     }
     res = x;
-    CFloat memb = TaylorMemb(x, 1);
     int n = 2;
+    CFloat memb = x;
     while(higher(memb, minVal))
     {
         memb = TaylorMemb(x, n);
